@@ -1,0 +1,203 @@
+---
+apiVersion: eventstreams.ibm.com/v1beta2
+kind: EventStreams
+metadata:
+  labels:
+    backup.eventstreams.ibm.com/component: eventstreams
+  name: <cluster-name>
+  namespace: <cluster-name>
+spec:
+  adminApi:
+    authentication:
+      - type: scram-sha-512
+    endpoints:
+      - authenticationMechanisms:
+          - tls
+          - scram-sha-512
+        certOverrides:
+          certificate: tls.crt
+          key: tls.key
+          secretName: <cluster-name>-es-prd-example-com
+        containerPort: 9080
+        host: admin-api.<cluster-name>.es-prd.example.com
+        name: admin-api
+        tlsVersion: TLSv1.3
+        type: route
+  adminUI:
+    authentication:
+      - type: scram-sha-512
+    endpoints:
+      - authenticationMechanisms:
+          - scram-sha-512
+        certOverrides:
+          certificate: tls.crt
+          key: tls.key
+          secretName: <cluster-name>-es-prd-example-com
+        containerPort: 3000
+        host: admin-ui.<cluster-name>.es-prd.example.com
+        name: admin-ui
+        tlsTermination: reencrypt
+        tlsVersion: TLSv1.2
+        type: route
+  apicurioRegistry:
+    endpoints:
+      - authenticationMechanisms:
+          - tls
+          - scram-sha-512
+        certOverrides:
+          certificate: tls.crt
+          key: tls.key
+          secretName: <cluster-name>-es-prd-example-com
+        containerPort: 9081
+        host: apicurio.<cluster-name>.es-prd.example.com
+        name: apicurio
+        tlsVersion: TLSv1.3
+        type: route
+  collector: {}
+  externalCACertificates:
+    secretName: <all-cluster-cas>-cluster-ca
+  license:
+    accept: true
+    license: L-AUKS-FKVXVL
+    use: EventAutomationProduction
+  restProducer:
+    endpoints:
+      - authenticationMechanisms:
+          - tls
+          - scram-sha-512
+        certOverrides:
+          certificate: tls.crt
+          key: tls.key
+          secretName: <cluster-name>-es-prd-example-com
+        containerPort: 9082
+        host: rest-producer.<cluster-name>.es-prd.example.com
+        name: rest-producer
+        tlsVersion: TLSv1.3
+        type: route
+  strimziOverrides:
+    clientsCa:
+      generateCertificateAuthority: false
+    clusterCa:
+      generateCertificateAuthority: false
+    cruiseControl: {}
+    kafka:
+      authorization:
+        type: simple
+      config:
+        auto.create.topics.enable: 'false'
+        default.replication.factor: 3
+        inter.broker.protocol.version: '3.8'
+        log.cleaner.threads: 6
+        min.insync.replicas: 2
+        num.io.threads: 24
+        num.network.threads: 9
+        num.replica.fetchers: 3
+        offsets.topic.replication.factor: 3
+      listeners:
+        - authentication:
+            type: scram-sha-512
+          configuration:
+            bootstrap:
+              host: bootstrap.extscram.<cluster-name>.es-prd.example.com
+            brokerCertChainAndKey:
+              certificate: tls.crt
+              key: tls.key
+              secretName: <cluster-name>-es-prd-example-com
+            brokers:
+              - broker: 0
+                host: broker-0.extscram.<cluster-name>.es-prd.example.com
+              - broker: 1
+                host: broker-1.extscram.<cluster-name>.es-prd.example.com
+              - broker: 2
+                host: broker-2.extscram.<cluster-name>.es-prd.example.com
+          name: extscram
+          port: 9094
+          tls: true
+          type: route
+        - authentication:
+            type: tls
+          configuration:
+            bootstrap:
+              host: bootstrap.exttls.<cluster-name>.es-prd.example.com
+            brokerCertChainAndKey:
+              certificate: ca.crt
+              key: ca.key
+              secretName: exttls-listener
+            brokers:
+              - broker: 0
+                host: broker-0.exttls.<cluster-name>.es-prd.example.com
+              - broker: 1
+                host: broker-1.exttls.<cluster-name>.es-prd.example.com
+              - broker: 2
+                host: broker-2.exttls.<cluster-name>.es-prd.example.com
+          name: exttls
+          port: 9095
+          tls: true
+          type: route
+        - authentication:
+            type: tls
+          name: tls
+          port: 9093
+          tls: true
+          type: internal
+      metricsConfig:
+        type: jmxPrometheusExporter
+        valueFrom:
+          configMapKeyRef:
+            key: kafka-metrics-config-<cluster-name>.yaml
+            name: configmap-metrics-config-<cluster-name>
+      rack:
+        topologyKey: topology.kubernetes.io/zone
+      replicas: 3
+      resources: {}
+      storage:
+        class: ocs-storagecluster-ceph-rbd
+        size: 10Gi
+        type: persistent-claim
+      template:
+        pod:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: dedicated
+                        operator: In
+                        values:
+                          - eventstreams
+          tolerations:
+            - effect: NoSchedule
+              key: dedicated
+              operator: Equal
+              value: eventstreams
+    kafkaExporter: {}
+    kafkaProxy: {}
+    zookeeper:
+      metricsConfig:
+        type: jmxPrometheusExporter
+        valueFrom:
+          configMapKeyRef:
+            key: zookeeper-metrics-config-<cluster-name>.yaml
+            name: configmap-metrics-config-<cluster-name>
+      replicas: 3
+      storage:
+        class: ocs-storagecluster-ceph-rbd
+        size: 4Gi
+        type: persistent-claim
+      template:
+        pod:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: dedicated
+                        operator: In
+                        values:
+                          - eventstreams
+          tolerations:
+            - effect: NoSchedule
+              key: dedicated
+              operator: Equal
+              value: eventstreams
+  version: latest

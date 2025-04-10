@@ -1,0 +1,12 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: eventstreams-kafka-broker
+subjects:
+- kind: ServiceAccount
+  name: eventstreams-cluster-operator
+  namespace: openshift-operators
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: eventstreams-kafka-broker
